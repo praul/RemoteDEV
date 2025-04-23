@@ -20,3 +20,4 @@ services:
     security_opt:
       - apparmor:unconfined
     privileged: true
+    restart: unless-stopped
