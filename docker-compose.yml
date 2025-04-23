@@ -8,6 +8,7 @@ services:
       - ./config:/config
       - ./authorized_keys:/home/devuser/.ssh/authorized_keys:rw
       - ./entrypoint.py:/entrypoint.py:ro
+      - ./cache/.vscode-server:/home/devuser/.vscode-server:rw
     environment:
       - SSH_KEY_PATH=/config/id_rsa
       - SERVERS_CONFIG=/config/servers.json

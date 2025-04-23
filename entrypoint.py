@@ -67,6 +67,7 @@ def ensure_ssh_dir_and_auth_keys():
         os.chmod(SSH_DIR, 0o700)
     except Exception as e:
         logging.warning(f"Could not set permissions on {SSH_DIR}: {e}")
+        
     if os.path.isfile(AUTHORIZED_KEYS):
         try:
             os.chown(AUTHORIZED_KEYS, uid, gid)
@@ -92,26 +93,72 @@ def mount_server(server):
     remote_path = server.get("remote_path")
     user = server.get("user", DEVUSER)
     port = server.get("port")
+    password = server.get("password")
     if not (name and host and remote_path):
         logging.warning(f"Skipping incomplete server config: {server}")
         return False
     mount_point = f"{MOUNT_BASE}/{name}"
     os.makedirs(mount_point, exist_ok=True)
-    cmd = [
-        "sshfs",
-        "-o", f"IdentityFile={SSH_KEY_PATH}",
-        "-o", "StrictHostKeyChecking=no",
-        "-o", "allow_other"
-    ]
-    if port:
-        cmd += ["-p", str(port)]
-    cmd += [f"{user}@{host}:{remote_path}", mount_point]
+    if password:
+        logging.info(f"Attempting password-based mount for {name}")
+        cmd = [
+            "sshfs",
+            "-o", "StrictHostKeyChecking=no",
+            "-o", "allow_other",
+            "-o", "password_stdin"
+            
+        ]
+        # Optionally, try forcing sftp_server if needed:
+        # cmd += ["-o", "sftp_server=/usr/lib/openssh/sftp-server"]
+        if port:
+            cmd += ["-p", str(port)]
+        cmd += [f"{user}@{host}:{remote_path}", mount_point]
+    else:
+        cmd = [
+            "sshfs",
+            "-o", f"IdentityFile={SSH_KEY_PATH}",
+            "-o", "StrictHostKeyChecking=no",
+            "-o", "allow_other"
+        ]
+        if port:
+            cmd += ["-p", str(port)]
+        cmd += [f"{user}@{host}:{remote_path}", mount_point]
     try:
-        subprocess.run(cmd, check=True)
-        logging.info(f"Mounted {user}@{host}:{remote_path} to {mount_point}")
-        current_mounts[name] = mount_point
-        return True
+        # Redact password from log for password-based mounts
+        if password:
+            log_cmd = ' '.join(cmd).replace(password, "****")
+            logging.info(f"sshfs command: {log_cmd}")
+        else:
+            logging.info(f"sshfs command: {' '.join(cmd)}")
+        if password:
+            process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            stdout, stderr = process.communicate(input=password + '\n', timeout=30)
+            result = type('Result', (), {'returncode': process.returncode, 'stdout': stdout, 'stderr': stderr})()
+        else:
+            # For key-based auth, just run normally
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        logging.info(f"sshfs stdout: {result.stdout}")
+        logging.info(f"sshfs stderr: {result.stderr}")
+        if result.returncode != 0:
+            logging.error(f"sshfs exited with code {result.returncode}")
+            return False
+        if os.path.ismount(mount_point):
+            logging.info(f"Mounted {user}@{host}:{remote_path} to {mount_point}")
+            current_mounts[name] = mount_point
+            return True
+        else:
+            logging.warning(f"sshfs command succeeded but {mount_point} is not a mount point. Possible authentication or connection issue.")
+            try:
+                ls_output = subprocess.run(["ls", "-l", mount_point], capture_output=True, text=True)
+                logging.warning(f"Contents of {mount_point}:\n{ls_output.stdout}\n{ls_output.stderr}")
+            except Exception as e:
+                logging.warning(f"Could not list contents of {mount_point}: {e}")
+            return False
     except subprocess.CalledProcessError as e:
+        if hasattr(e, 'output') and e.output:
+            logging.error(f"SSHFS output: {e.output.decode(errors='ignore')}")
+        if hasattr(e, 'stderr') and e.stderr:
+            logging.error(f"SSHFS error: {e.stderr.decode(errors='ignore')}")
         logging.error(f"Failed to mount {user}@{host}:{remote_path} to {mount_point}: {e}")
         return False
 
@@ -127,9 +174,15 @@ def unmount_server(name):
 
 def sync_mounts():
     servers = get_servers()
+    logging.info(f"Processing {len(servers)} servers from config.")
     new_names = set()
     for server in servers:
         name = server.get("name")
+        host = server.get("host")
+        remote_path = server.get("remote_path")
+        if not (name and host and remote_path):
+            logging.warning(f"Skipping server due to missing fields: {server}")
+            continue
         new_names.add(name)
         if name not in current_mounts:
             mount_server(server)

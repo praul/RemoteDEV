@@ -20,6 +20,12 @@ if [ ! -f config/servers.json ]; then
   echo "Copied servers.json.example to config/servers.json"
 fi
 
+
+mkdir -p cache/.vscode-server
+#chown -R root:root cache/.vscode-server
+chmod -R 777 cache/.vscode-server
+
+
 docker compose build
 
 echo "Project initialized."

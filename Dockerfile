@@ -16,6 +16,7 @@ RUN apt-get update && \
       python3-pip \
       python3-venv && \
     rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y sshpass
 
 
 # Create virtual environment and install watchdog

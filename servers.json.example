@@ -1,11 +1,19 @@
 {
-    "servers": [
-        {
-            "name": "folder_name_compatible_name",
-            "user": "username",
-            "host": "thisisyoutestserver.com",
-            "port": 22,
-            "remote_path": "/remote/path"
-        }
-    ]
+  "servers": [
+    {
+      "name": "ssh_key_example",
+      "user": "testuser",
+      "host": "testhost.example.com",
+      "port": 22,
+      "remote_path": "/test/path"
+    },
+    {
+      "name": "ssh_password_example",
+      "user": "testuser",
+      "host": "testhost2.example.com",
+      "port": 22,
+      "password": "testpassword",
+      "remote_path": "/test/path2"
+    }
+  ]
 }
