@@ -1,0 +1,21 @@
+services:
+  ssh-proxy:
+    build: .
+    container_name: ssh-proxy
+    ports:
+      - "2222:22"
+    volumes:
+      - ./config:/config
+      - ./authorized_keys:/home/devuser/.ssh/authorized_keys:rw
+      - ./entrypoint.py:/entrypoint.py:ro
+    environment:
+      - SSH_KEY_PATH=/config/id_rsa
+      - SERVERS_CONFIG=/config/servers.json
+    cap_add:
+      - SYS_ADMIN
+      - MKNOD
+    devices:
+      - /dev/fuse
+    security_opt:
+      - apparmor:unconfined
+    privileged: true

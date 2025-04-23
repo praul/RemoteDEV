@@ -1,0 +1,12 @@
+# Sensitive SSH and config files
+authorized_keys
+config/id_rsa
+config/id_rsa.pub
+config/servers.json
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Other common ignores
+*.log
