@@ -1,4 +1,11 @@
 #!/bin/bash
+
+# Check if script is run as root
+if [[ "$EUID" -ne 0 ]]; then
+  echo "You need to run this as sudo/root. Reason: Changing ownership of cache directory."
+  echo "Please run: sudo bash init_project.sh"
+  exit 1
+fi
 set -e
 
 # Create config directory if it doesn't exist
