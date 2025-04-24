@@ -33,6 +33,18 @@ It also mitigates VSCode deprecating old servers. You can mount your old servers
 - **How it works:**  
   The MCP server is started automatically by Roo/Cline when needed. It uses the FastMCP protocol to expose its tools. No manual port or server management is required.
 
+- **Config**
+  Add this to your mcp-server config
+  ```json
+     "ssh_search": {
+        "command": "/venv/bin/python",
+        "args": [
+            "/mcp_ssh_search/server.py"
+        ]
+    }
+  ```
+
+
 ## Using with Roo/Cline
 
 **Add this to your system prompt:**
