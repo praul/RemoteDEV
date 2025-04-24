@@ -2,6 +2,8 @@
 
 This container is designed for using VSCode with multiple remote locations mounted via SSHFS. It enables seamless development across several remote servers, with all mounts accessible under `/mnt/sshfs/{project}`.
 
+It also mitigates VSCode deprecating old servers. You can mount your old servers into this container and keep on using VSCode.
+
 ## Features
 
 - **SSHFS Mounts:** Automatically mounts remote project folders as defined in `/config/servers.json` to `/mnt/sshfs/{name}`.
