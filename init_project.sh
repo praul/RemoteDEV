@@ -22,4 +22,8 @@ chmod 600 cache/.ssh/authorized_keys
 
 docker compose build
 
+echo "## Add your SSH key (for loggin into DEVPROXY) to cache/.ssh/authorized_keys (you may need superuser privileges, alternatively do this inside the container)."
+echo "You will find your SSH keys for mounts in config dir. (This is the key you add to authorized_keys in your remote servers)."
 echo "Project initialized."
+echo "Edit config/servers.json to add your servers."
+echo "You can now run the project using 'docker compose up'."
