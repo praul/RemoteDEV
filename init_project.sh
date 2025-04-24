@@ -1,13 +1,6 @@
 #!/bin/bash
 set -e
 
-# Create authorized_keys if it doesn't exist
-if [ ! -f authorized_keys ]; then
-  touch authorized_keys
-  echo "# Add your public keys here" > authorized_keys
-  echo "Created authorized_keys"
-fi
-
 # Create config directory if it doesn't exist
 if [ ! -d config ]; then
   mkdir config
@@ -21,10 +14,9 @@ if [ ! -f config/servers.json ]; then
 fi
 
 
-mkdir -p cache/.vscode-server
-#chown -R root:root cache/.vscode-server
-chmod -R 777 cache/.vscode-server
-
+mkdir -p cache/.ssh
+touch cache/.ssh/authorized_keys
+chown -R 1001:1001 cache
 
 docker compose build
 
