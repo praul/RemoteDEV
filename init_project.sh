@@ -17,6 +17,8 @@ fi
 mkdir -p cache/.ssh
 touch cache/.ssh/authorized_keys
 chown -R 1001:1001 cache
+chmod 700 cache/.ssh
+chmod 600 cache/.ssh/authorized_keys
 
 docker compose build
 
