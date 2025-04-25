@@ -12,6 +12,7 @@ from watchdog.events import FileSystemEventHandler
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s")
 
 SSH_KEY_PATH = os.environ.get("SSH_KEY_PATH", "/config/id_rsa")
+USER_SSH_KEY_PATH = f"/home/devuser/.ssh/id_rsa"
 SERVERS_CONFIG = os.environ.get("SERVERS_CONFIG", "/config/servers.json")
 DEVUSER = "devuser"
 SSH_DIR = f"/home/{DEVUSER}/.ssh"
@@ -21,37 +22,66 @@ MOUNT_BASE = "/mnt/sshfs"
 current_mounts = {}
 
 def ensure_ssh_key():
+    dir_path = os.path.dirname(SSH_KEY_PATH)
+    if not os.access(dir_path, os.W_OK):
+        logging.error(f"Cannot write SSH key to {SSH_KEY_PATH}. Directory {dir_path} is not writable.")
+        return False
+
+    # Get user ID and group ID
+    import pwd
+    try:
+        pw = pwd.getpwnam(DEVUSER)
+        uid, gid = pw.pw_uid, pw.pw_gid
+    except Exception:
+        uid, gid = 1001, 1001  # fallback
+
+    # Generate new key if it doesn't exist
     if not os.path.isfile(SSH_KEY_PATH):
-        dir_path = os.path.dirname(SSH_KEY_PATH)
-        if not os.access(dir_path, os.W_OK):
-            logging.error(f"Cannot write SSH key to {SSH_KEY_PATH}. Directory {dir_path} is not writable.")
-            return False
         logging.info(f"No SSH key found at {SSH_KEY_PATH}, generating new key pair...")
         try:
             subprocess.run([
                 "ssh-keygen", "-t", "rsa", "-b", "4096", "-N", "", "-f", SSH_KEY_PATH
             ], check=True)
-            os.chown(SSH_KEY_PATH, 1000, 1000)
-            os.chmod(SSH_KEY_PATH, 0o600)
-            pubkey = SSH_KEY_PATH + ".pub"
-            if os.path.isfile(pubkey):
-                os.chown(pubkey, 1000, 1000)
-                os.chmod(pubkey, 0o644)
-                with open(pubkey) as f:
-                    logging.info("Generated new SSH key. Public key:\n" + f.read())
         except Exception as e:
             logging.error(f"Failed to generate SSH key: {e}")
             return False
-    else:
-        try:
-            os.chown(SSH_KEY_PATH, 1000, 1000)
+        
+        # Log public key if generated
+        pubkey = SSH_KEY_PATH + ".pub"
+        if os.path.isfile(pubkey):
+            with open(pubkey) as f:
+                logging.info("Generated new SSH key. Public key:\n" + f.read())
+
+    try:
+        # Ensure .ssh directory exists
+        ensure_ssh_dir_and_auth_keys()
+        
+        # Set permissions on /config SSH keys (owned by root)
+        if os.path.isfile(SSH_KEY_PATH):
+            os.chown(SSH_KEY_PATH, 0, 0)  # root ownership
             os.chmod(SSH_KEY_PATH, 0o600)
             pubkey = SSH_KEY_PATH + ".pub"
             if os.path.isfile(pubkey):
-                os.chown(pubkey, 1000, 1000)
+                os.chown(pubkey, 0, 0)  # root ownership
                 os.chmod(pubkey, 0o644)
-        except Exception as e:
-            logging.warning(f"Could not set permissions on SSH key: {e}")
+        
+        # Copy and set permissions in user's directory
+        subprocess.run(["cp", "-f", SSH_KEY_PATH, USER_SSH_KEY_PATH], check=True)
+        os.chown(USER_SSH_KEY_PATH, uid, gid)  # devuser ownership
+        os.chmod(USER_SSH_KEY_PATH, 0o600)
+        
+        # Handle public key
+        pubkey = SSH_KEY_PATH + ".pub"
+        if os.path.isfile(pubkey):
+            user_pubkey = USER_SSH_KEY_PATH + ".pub"
+            subprocess.run(["cp", "-f", pubkey, user_pubkey], check=True)
+            os.chown(user_pubkey, uid, gid)  # devuser ownership
+            os.chmod(user_pubkey, 0o644)
+            
+    except Exception as e:
+        logging.warning(f"Could not setup SSH keys: {e}")
+        return False
+        
     return True
 
 def ensure_ssh_dir_and_auth_keys():

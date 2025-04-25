@@ -9,6 +9,54 @@ It also mitigates VSCode deprecating old servers. You can mount your old servers
 - **SSHFS Mounts:** Automatically mounts remote project folders as defined in `/config/servers.json` to `/mnt/sshfs/{name}`.
 - **Integrated MCP Server (`ssh_search`):** Provides fast, credential-aware remote file and string search for use with Roo, Cline, or other MCP-compatible agents.
 - **Password and key-based SSH support:** Uses credentials from `/config/servers.json`.
+- **Remote Command Execution (`dremote`):** Execute commands directly on remote servers while maintaining correct paths.
+
+## The dremote Command
+
+The `dremote` command allows you to execute commands directly on the remote server while preserving the correct path mapping. This is particularly useful for operations that are faster to perform directly on the server rather than through SSHFS, such as:
+
+- Git operations (add, commit, push)
+- File operations on large sets of files
+- Server-side build or deployment commands
+- Database operations
+
+### Usage
+
+```bash
+dremote <command>
+```
+
+Example: When you're in an SSHFS mounted directory like `/mnt/sshfs/myproject/src` and run:
+```bash
+dremote git status
+```
+The command executes in the corresponding remote directory (e.g., `/var/www/myproject/src`).
+
+### Common Use Cases
+
+1. **Git Operations:**
+   ```bash
+   dremote git add .
+   dremote git commit -m "Update files"
+   dremote git push
+   ```
+
+2. **File Operations:**
+   ```bash
+   dremote find . -name "*.log"
+   dremote rm -rf cache/*
+   ```
+
+3. **Build Commands:**
+   ```bash
+   dremote npm run build
+   dremote composer install
+   ```
+
+The command automatically:
+- Determines which server to use based on your current SSHFS mount
+- Maps the local path to the correct remote path
+- Uses the appropriate SSH credentials from your config
 
 ## How to Start the Container
 
@@ -39,7 +87,7 @@ It also mitigates VSCode deprecating old servers. You can mount your old servers
      "ssh_search": {
         "command": "/venv/bin/python",
         "args": [
-            "/mcp_ssh_search/server.py"
+            "/tools/mcp_ssh_search/server.py"
         ]
     }
   ```

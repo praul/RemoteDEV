@@ -2,7 +2,7 @@
     "ssh_search": {
         "command": "/venv/bin/python",
         "args": [
-            "/mcp_ssh_search/server.py"
+            "/tools/mcp_ssh_search/server.py"
         ]
     }
 }
